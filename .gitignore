@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (varsa)
+node_modules/
+
+# Geçici
+*.log
+tmp/
+temp/
+
+# NOT: index.html, README.md ve LICENSE asla silinmez.

@@ -1,0 +1,88 @@
+name: Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Question bank integrity
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const m = html.match(/const SORULAR=\[([\s\S]*?)\n\];/);
+          if (!m) { console.error('SORULAR bulunamadi'); process.exit(1); }
+          const sorular = eval('[' + m[1] + ']');
+          const bozuk = sorular.filter(q =>
+            !q.s || !Array.isArray(q.o) || q.o.length !== 4 ||
+            typeof q.c !== 'number' || q.c < 0 || q.c > 3 || !q.a
+          );
+          if (bozuk.length) {
+            console.error('Bozuk soru: ' + bozuk.length);
+            bozuk.forEach(q => console.error('  - ' + JSON.stringify(q)));
+            process.exit(1);
+          }
+          const gerek = { trafik: 23, ilkyardim: 12, motor: 9, adap: 6 };
+          for (const [d, n] of Object.entries(gerek)) {
+            const c = sorular.filter(q => q.d === d).length;
+            if (c < n) { console.error(d + ' yetersiz: ' + c + '/' + n); process.exit(1); }
+          }
+          console.log('Toplam soru: ' + sorular.length);
+          "
+
+      - name: Other data arrays
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const cik = (ad) => {
+            const m = html.match(new RegExp('const ' + ad + '=\\\\[([\\\\s\\\\S]*?)\\\\n\\\\];'));
+            return m ? eval('[' + m[1] + ']') : [];
+          };
+          const arac = cik('ARACSORU');
+          const bozuk = arac.filter(q => !q.s || !Array.isArray(q.o) || q.o.length !== 4 || q.c < 0 || q.c > 3 || !q.a);
+          if (bozuk.length) { console.error('ARACSORU bozuk: ' + bozuk.length); process.exit(1); }
+          console.log('Arac sorulari: ' + arac.length + ', Levhalar: ' + cik('LEVHALAR').length);
+          "
+
+      - name: JavaScript syntax
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const s = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
+          fs.writeFileSync('/tmp/app.js', s);
+          "
+          node --check /tmp/app.js
+          echo "JS syntax OK"
+
+      - name: JSON-LD validity
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const m = html.match(/<script type=\"application\/ld\+json\">([\s\S]*?)<\/script>/);
+          if (!m) { console.error('JSON-LD yok'); process.exit(1); }
+          const j = JSON.parse(m[1]);
+          console.log('JSON-LD OK: ' + j['@graph'].length + ' tip');
+          "
+
+      - name: HTML structure
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const navs = [...html.matchAll(/data-s=\"([a-z]+)\"/g)].map(m => m[1]);
+          const secs = [...html.matchAll(/id=\"s-([a-z]+)\"/g)].map(m => m[1]);
+          const eksik = navs.filter(n => !secs.includes(n));
+          if (eksik.length) { console.error('Nav butonu olmayan sekme: ' + eksik); process.exit(1); }
+          if (!html.includes('<!DOCTYPE html>')) { console.error('DOCTYPE eksik'); process.exit(1); }
+          console.log('HTML yapisi OK: ' + navs.length + ' sekme');
+          "

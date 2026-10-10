@@ -1,0 +1,100 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Validate question bank
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+
+          // Soru dizisi yapısal kontrol
+          const m = html.match(/const SORULAR=\[([\s\S]*?)\n\];/);
+          if (!m) { console.error('SORULAR dizisi bulunamadı'); process.exit(1); }
+          const sorular = eval('[' + m[1] + ']');
+
+          const bozuk = sorular.filter(q =>
+            !q.s || !Array.isArray(q.o) || q.o.length !== 4 ||
+            typeof q.c !== 'number' || q.c < 0 || q.c > 3 || !q.a
+          );
+
+          if (bozuk.length) {
+            console.error('Bozuk soru sayısı: ' + bozuk.length);
+            console.error(JSON.stringify(bozuk, null, 2));
+            process.exit(1);
+          }
+
+          // Her ders için havuz sınav üretebilir mi?
+          const gerek = { trafik: 23, ilkyardim: 12, motor: 9, adap: 6 };
+          for (const [ders, adet] of Object.entries(gerek)) {
+            const mevcut = sorular.filter(q => q.d === ders).length;
+            if (mevcut < adet) {
+              console.error(ders + ' havuzu yetersiz: ' + mevcut + '/' + adet);
+              process.exit(1);
+            }
+          }
+
+          console.log('Sorulari dogrulandi: ' + sorular.length);
+          "
+
+      - name: Validate JSON-LD structured data
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const m = html.match(/<script type=\"application\/ld\+json\">([\s\S]*?)<\/script>/);
+          if (!m) { console.error('JSON-LD bulunamadi'); process.exit(1); }
+          try {
+            const j = JSON.parse(m[1]);
+            if (!j['@graph']) { console.error('@graph eksik'); process.exit(1); }
+            console.log('JSON-LD dogrulandi: ' + j['@graph'].length + ' tip');
+          } catch (e) {
+            console.error('JSON-LD gecersiz: ' + e.message);
+            process.exit(1);
+          }
+          "
+
+      - name: Validate JavaScript syntax
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
+          fs.writeFileSync('/tmp/app.js', scripts);
+          "
+          node --check /tmp/app.js
+          echo "JavaScript sozdizimi dogrulandi"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
