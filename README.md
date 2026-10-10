@@ -189,6 +189,32 @@ Sorular, düzeltmeler ve yeni özellikler katkıya açıktır — [CONTRIBUTING.
 
 ⭐ **Bu proje sana yardım ettiyse bir yıldız bırak.** Bu, motivasyon sağlar ve daha fazla kişinin ehliyet sınavına hazırlanmasına yardımcı olur.
 
+---
+
+## 🔍 Arama Motoru Görünürlüğü
+
+Bu depo, arama motorları (SEO), yapay zekâ arama motorları (GEO) ve cevap motorları (AEO) için yapılandırılmıştır.
+
+| Katman | Uygulama |
+|---|---|
+| **SEO** | Meta etiketleri, Open Graph, Twitter Card, canonical, sitemap.xml, robots.txt |
+| **GEO** | JSON-LD `WebApplication` + `ItemList` — yapay zekâ motorlarına yapısal veri |
+| **AEO** | JSON-LD `FAQPage` (22 soru) + `HowTo` — doğrudan cevap çıkarma için |
+
+### Dizine ekletme
+
+Site yayınlandıktan sonra şu adreslerden kaydedebilirsin:
+
+- **Google Search Console** → `https://search.google.com/search-console` → URL ön kontrolü: `https://devkursat.github.io/ehliyet-sinavi/`
+- **Bing Webmaster Tools** → `https://www.bing.com/webmasters`
+- **IndexNow** ile anlık indeksleme (Bing, Yandex, DuckDuckGo destekler)
+
+> `robots.txt`, GPTBot / ClaudeBot / PerplexityBot / Google-Extended gibi yapay zekâ tarayıcılarına açıkça izin verir.
+
+### İçerik stratejisi
+
+Sorular her zaman **güncel MEB müfredatıyla** eşleşecek şekilde ve açıklamalı olarak eklenir. Bir sorunun mevzuatı değişirse (`Limits`) güncelleme PR'ı açabilirsin — bu hem katkı hem de SEO sinyali üretir.
+
 ## Lisans
 
 [MIT](LICENSE) © Ehliyet Sınavı Hazırlık katkıcıları
